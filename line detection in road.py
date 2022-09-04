@@ -1,0 +1,80 @@
+import cv2
+import numpy as np
+import matplotlib.pyplot as plt
+
+#img = cv2.imread("test_image.jpg")
+
+#lane_image = np.copy(img)
+
+
+def image_conversion(image):
+    grey = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    blurr = cv2.GaussianBlur(grey, (5, 5), 0)
+    canny = cv2.Canny(grey , 50, 150)
+    return canny
+
+
+def region_find(image):
+    height = image.shape[0]
+    triangle = np.array([[(200, height), (550, 250), (1100, height)]],np.int32)
+    black = np.zeros_like(image)
+    cv2.fillPoly(black, triangle, 255)
+    cropped = cv2.bitwise_and(image, black)
+    return cropped
+
+
+def display_lines(img, lines):
+    line_image = np.zeros_like(img)
+    if lines is not None:
+        for line in lines:
+            x1, y1, x2, y2 = line.reshape(4)
+            cv2.line(line_image, (x1, y1), (x2, y2), (255, 0, 0), 15)
+
+    return line_image
+
+
+def co_ordinates(image, line_parameters):
+    slope, intercept = line_parameters
+    y1 = int(image.shape[0])
+    y2 = int(y1 * (3 / 5))
+    x1 = int((y1 - intercept) / slope)
+    x2 = int((y2 - intercept) / slope)
+    return [[x1, y1, x2, y2]]
+
+
+def slope_interception(image, lines):
+    left_fit = []
+    right_fit = []
+    if lines is None:
+        return None
+    for line in lines:
+        x1, y1, x2, y2 = line.reshape(4)
+        parameters = np.polyfit((x1, x2), (y1, y2), 1)
+        slope = parameters[0]
+        intercept = parameters[1]
+        if slope < 0:
+            left_fit.append((slope, intercept))
+        else:
+            right_fit.append((slope, intercept))
+
+    leftfit_avg = np.average(left_fit, axis=0)
+    rightfit_avg = np.average(right_fit, axis=0)
+    left_line = co_ordinates(image, leftfit_avg)
+    right_line = co_ordinates(image, rightfit_avg)
+    return np.array([left_line,right_line])
+cap = cv2.VideoCapture("test2.mp4")
+while(cap.isOpened()):
+    _, frame = cap.read()
+
+
+
+    lane_canny = image_conversion(frame)
+
+    cropped_canny = region_find(lane_canny)
+    lines = cv2.HoughLinesP(cropped_canny, 2, np.pi / 180, 100, np.array([]), minLineLength=40, maxLineGap=5)
+    averaged_lines = slope_interception(frame, lines)
+    line_image= display_lines(frame, averaged_lines)
+    combo = cv2.addWeighted(frame, 0.8, line_image, 1, 1)
+
+    cv2.imshow("out", combo)
+    cv2.waitKey(1)
