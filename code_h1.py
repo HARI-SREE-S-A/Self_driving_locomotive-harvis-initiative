@@ -15,6 +15,7 @@ def region(image):
     masked = cv2.bitwise_and(image,mask)
     return masked
 
+
 img = cv2.imread("test_image.jpg")
 out1 = conversn(img)
 out2 = region(out1)
