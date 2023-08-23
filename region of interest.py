@@ -2,7 +2,6 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 
-
 def canny(image):
     grey = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     blurr = cv2.GaussianBlur(grey, (5, 5), 0)
